@@ -172,6 +172,8 @@ class GithubCommand(object):
         else:
             return values
 
+    def raw_non_json_request(self, url):
+        return self.request.raw_non_json_request(url, {})
 
 def doc_generator(docstring, attributes):
     """Utility function to augment BaseDataType docstring

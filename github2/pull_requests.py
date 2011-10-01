@@ -92,3 +92,12 @@ class PullRequests(GithubCommand):
         """
         return self.get_values(project, state, filter="pulls",
                                datatype=PullRequest)
+
+    def diff(self, *params):
+        if type(params[0]) is PullRequest:
+            pull_request = params[0]
+            return self.raw_non_json_request(pull_request.diff_url)
+        else:
+            [project, number] = params
+            return self.raw_non_json_request("/".join(["https://github.com", project, "pull", str(number) + ".diff"]))
+

@@ -172,6 +172,31 @@ class GithubRequest(object):
 
         return json
 
+
+    def raw_non_json_request(self, url, extra_post_data, method="GET"):
+        scheme, netloc, path, query, fragment = urlsplit(url)
+        post_data = None
+        headers = self.http_headers
+        method = method.upper()
+        if extra_post_data or method == "POST":
+            post_data = self.encode_authentication_data(extra_post_data)
+            headers["Content-Length"] = str(len(post_data))
+        else:
+            query = self.encode_authentication_data(parse_qs(query))
+        url = urlunsplit((scheme, netloc, path, query, fragment))
+
+        response, content = self._http.request(url, method, post_data, headers)
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            logging.debug("URL: %r POST_DATA: %r RESPONSE_TEXT: %r", url,
+                          post_data, content)
+        if response.status >= 400:
+            raise HttpError("Unexpected response from github.com %d: %r"
+                            % (response.status, content), content,
+                            response.status)
+        result = content.decode(charset_from_headers(response))
+
+        return result
+
     @property
     def http_headers(self):
         return {
