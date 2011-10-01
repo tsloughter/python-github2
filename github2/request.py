@@ -148,24 +148,7 @@ class GithubRequest(object):
         return result
 
     def raw_request(self, url, extra_post_data, method="GET"):
-        scheme, netloc, path, query, fragment = urlsplit(url)
-        post_data = None
-        headers = self.http_headers
-        method = method.upper()
-        if extra_post_data or method == "POST":
-            post_data = self.encode_authentication_data(extra_post_data)
-            headers["Content-Length"] = str(len(post_data))
-        else:
-            query = self.encode_authentication_data(parse_qs(query))
-        url = urlunsplit((scheme, netloc, path, query, fragment))
-        response, content = self._http.request(url, method, post_data, headers)
-        if LOGGER.isEnabledFor(logging.DEBUG):
-            logging.debug("URL: %r POST_DATA: %r RESPONSE_TEXT: %r", url,
-                          post_data, content)
-        if response.status >= 400:
-            raise HttpError("Unexpected response from github.com %d: %r"
-                            % (response.status, content), content,
-                            response.status)
+        response, content = self.base_request(url, extra_post_data, method)
         json = simplejson.loads(content.decode(charset_from_headers(response)))
         if json.get("error"):
             raise self.GithubError(json["error"][0]["error"])
@@ -174,6 +157,12 @@ class GithubRequest(object):
 
 
     def raw_non_json_request(self, url, extra_post_data, method="GET"):
+        response, content = self.base_request(url, extra_post_data, method)
+        result = content.decode(charset_from_headers(response))
+
+        return result
+
+    def base_request(self, url, extra_post_data, method="GET"):
         scheme, netloc, path, query, fragment = urlsplit(url)
         post_data = None
         headers = self.http_headers
@@ -184,7 +173,6 @@ class GithubRequest(object):
         else:
             query = self.encode_authentication_data(parse_qs(query))
         url = urlunsplit((scheme, netloc, path, query, fragment))
-
         response, content = self._http.request(url, method, post_data, headers)
         if LOGGER.isEnabledFor(logging.DEBUG):
             logging.debug("URL: %r POST_DATA: %r RESPONSE_TEXT: %r", url,
@@ -193,9 +181,8 @@ class GithubRequest(object):
             raise HttpError("Unexpected response from github.com %d: %r"
                             % (response.status, content), content,
                             response.status)
-        result = content.decode(charset_from_headers(response))
 
-        return result
+        return response, content
 
     @property
     def http_headers(self):
@@ -203,3 +190,4 @@ class GithubRequest(object):
             "User-Agent": "pygithub2 v1",
             "Accept": "application/json",
         }
+
